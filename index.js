@@ -34,6 +34,7 @@ async function run() {
     const instructorsCollection = client
       .db("sportsSummerDB")
       .collection("instructors");
+      const selectedClassesCollection = client.db("sportsSummerDB").collection("selectedClasses");
 
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
@@ -44,6 +45,13 @@ async function run() {
       const result = await instructorsCollection.find().toArray();
       res.send(result);
     });
+
+    app.post('/selectedClasses',async(req, res) =>{
+        const item = req.body;
+        console.log(item);
+        const result = await selectedClassesCollection.insertOne(item);
+        res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
