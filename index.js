@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -13,7 +14,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.x6lu5yx.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -34,43 +34,53 @@ async function run() {
     const instructorsCollection = client
       .db("sportsSummerDB")
       .collection("instructors");
-      const selectedClassesCollection = client.db("sportsSummerDB").collection("selectedClasses");
+    const selectedClassesCollection = client
+      .db("sportsSummerDB")
+      .collection("selectedClasses");
+    const usersCollection = client.db("sportsSummerDB").collection("users");
 
-    //   classesCollection APIs
+    // users related APIs
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    //   classes related APIs
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
 
-    // instructorsCollection APIs
+    // instructors related APIs
     app.get("/instructors", async (req, res) => {
       const result = await instructorsCollection.find().toArray();
       res.send(result);
     });
 
-    // selectedClassesCollection APIs
-    app.get('/selectedClasses', async(req, res) =>{
-        const email = req.query.email;
-        if(!email){
-            res.send([]);
-        }
-        const query = {email: email};
-        const result = await selectedClassesCollection.find(query).toArray();
-        res.send(result);
-    })
+    // selected classes related APIs
+    app.get("/selectedClasses", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      }
+      const query = { email: email };
+      const result = await selectedClassesCollection.find(query).toArray();
+      res.send(result);
+    });
 
-    app.post('/selectedClasses',async(req, res) =>{
-        const item = req.body;
-        const result = await selectedClassesCollection.insertOne(item);
-        res.send(result);
-    })
+    app.post("/selectedClasses", async (req, res) => {
+      const item = req.body;
+      const result = await selectedClassesCollection.insertOne(item);
+      res.send(result);
+    });
 
-    app.delete('/selectedClasses/:id', async(req, res) =>{
-        const id =req.params.id
-        const query = {_id: new ObjectId(id)};
-        const result = await selectedClassesCollection.deleteOne(query);
-        res.send(result);
-    })
+    app.delete("/selectedClasses/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await selectedClassesCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
