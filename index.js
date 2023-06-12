@@ -183,6 +183,28 @@ async function run() {
         res.send(result);
       });
 
+      app.get("/classes/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await classesCollection.findOne(query)
+        res.send(result);
+      });
+
+
+    app.patch("/classes/feedback/:id", async(req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const feedback = req.body;
+        console.log(feedback.feedback);
+        const updateDoc = {
+          $set: {
+            feedback: feedback.feedback
+          },
+        };
+        const result = await classesCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      });
+
     // instructors related APIs
     app.get("/instructors", async (req, res) => {
       const result = await instructorsCollection.find().toArray();
