@@ -59,7 +59,9 @@ async function run() {
       .db("sportsSummerDB")
       .collection("selectedClasses");
     const usersCollection = client.db("sportsSummerDB").collection("users");
-    const paymentCollection = client.db("sportsSummerDB").collection("payments");
+    const paymentCollection = client
+      .db("sportsSummerDB")
+      .collection("payments");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -161,7 +163,10 @@ async function run() {
 
     //   classes related APIs
     app.get("/classes", async (req, res) => {
-      const result = await classesCollection.find().toArray();
+      const result = await classesCollection
+        .find()
+        .sort({ enrolledCount: -1 })
+        .toArray();
       res.send(result);
     });
 
@@ -259,7 +264,7 @@ async function run() {
     });
 
     // payment intent
-    app.post("/create-payment-intent",verifyJWT, async (req, res) => {
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const { price } = req.body;
       const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
@@ -274,29 +279,37 @@ async function run() {
 
     // payment related APIs
 
-    app.post('/payments', verifyJWT, async(req,res) =>{
-        const payment = req.body;
-        const insertResult = await paymentCollection.insertOne(payment);
-        const query = {_id: new ObjectId(payment.singleClassId)}
-        const deleteResult = await selectedClassesCollection.deleteOne(query)
-        res.send({insertResult, deleteResult});
-    }) 
+    app.post("/payments", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+
+      // delete single Class
+      const query = { _id: new ObjectId(payment.singleClassId) };
+      const deleteResult = await selectedClassesCollection.deleteOne(query);
+
+      // increase enrolled Count & decrease available Seats
+      const classQuery = { _id: new ObjectId(payment.classId) };
+      const classUpdate = { $inc: { enrolledCount: 1 , availableSeats: -1} };
+      await classesCollection.updateOne(classQuery, classUpdate);
+
+      res.send({ insertResult, deleteResult });
+    });
 
     app.get("/enrolledClasses", verifyJWT, async (req, res) => {
-        const email = req.query.email;
-        if (!email) {
-          res.send([]);
-        }
-        const decodedEmail = req.decoded.email;
-        if (email !== decodedEmail) {
-          return res
-            .status(403)
-            .send({ error: true, message: "forbidden access" });
-        }
-        const query = { email: email };
-        const result = await paymentCollection.find(query).toArray();
-        res.send(result);
-      });
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      }
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      const query = { email: email };
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
